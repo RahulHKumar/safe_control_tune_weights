@@ -21,12 +21,19 @@ obstacle = Obstacle([-2; -2.25], 1.5);
 % Run MPC CBF a bunch?
 for k = 1:100
     % Solve nlp
-    [x_opt, u_opt] = runMpcStep(robot, controller, obstacle);
-    % Print
-    disp("k: " + num2str(k) + ", x = [" + num2str(full(robot.x')) + "], u = [" + num2str(full(u_opt(:,1)')) + "]");
+    [x_opt, u_opt] = runMpcQpStep(robot, controller, obstacle);
     % Update robot state
     robot = robot.update(u_opt(:, 1));
-    % Log state and control
-
 end
 
+x = robot.xlog(1, :)';
+y = robot.xlog(2, :)';
+
+fig = figure;
+grid on; hold on;
+obstacle.draw(fig);
+scatter(x, y, Marker="o", MarkerEdgeColor="k", MarkerFaceColor="red");
+scatter(x0(1), x0(2), 100, Marker="diamond", MarkerEdgeColor="k", MarkerFaceColor="blue");
+scatter(0, 0, 200, Marker="pentagram", MarkerEdgeColor="k", MarkerFaceColor="green");
+legend("Obstacle", "Path", "Initial Point", "Goal Point", Interpreter="latex", location="best");
+axis([-6, 1, -6, 1], "equal");
