@@ -21,7 +21,7 @@ obstacle = Obstacle([-2; -2.25], 1.5);
 % Run MPC CBF a bunch?
 for k = 1:100
     % Solve nlp
-    [x_opt, u_opt] = runMpcQpStep(robot, controller, obstacle);
+    [x_opt, u_opt] = runMpcStep(robot, controller, obstacle);
     % Update robot state
     robot = robot.update(u_opt(:, 1));
 end
