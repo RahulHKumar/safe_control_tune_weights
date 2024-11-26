@@ -12,7 +12,10 @@ classdef Obstacle
         function [] = draw(self, fig)
             figure(fig);
             theta = 0:pi/100:2*pi;
-            plot(self.r * cos(theta) + self.pos(1), self.r * sin(theta) + self.pos(2), LineWidth=1.5, Color="black");
+            x = self.r * cos(theta) + self.pos(1);
+            y = self.r * sin(theta) + self.pos(2);
+            fill(x, y, [0.9 0.9 0.9]);
+            plot(x, y, "k");
         end
     end
 end

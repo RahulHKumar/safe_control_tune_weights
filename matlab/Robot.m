@@ -30,5 +30,11 @@ classdef Robot
             self.xlog(:, end + 1) = full(self.x);
             self.ulog(:, end + 1) = full(u);
         end
+
+        function [self] = reset(self)
+            self.x = self.xlog(:, 1);
+            self.xlog = self.xlog(:, 1);
+            self.ulog = [];
+        end
     end
 end
