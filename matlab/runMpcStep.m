@@ -1,4 +1,4 @@
-function [x_opt, u_opt] = runMpcStep(robot, controller, obstacle)
+function [x_opt, u_opt] = runMpcStep(robot, controller, obstacle, x_opt_prev, u_opt_prev)
     import casadi.*
     % Initialize the opti stack
     opti = Opti();
@@ -22,16 +22,22 @@ function [x_opt, u_opt] = runMpcStep(robot, controller, obstacle)
             opti.subject_to(x(:, k+1) == robot.Ad * x(:, k) + robot.Bd * u(:, k));
         % Add stage cost
         obj = obj + x(:, k)' * controller.Q * x(:, k) + u(:, k)' * controller.R * u(:, k);
-    end
-    % Loop through all steps
-    for k = 1:N
         % Compute value of CBF at current step
         hk = (x(1:2, k) - obstacle.pos)' * (x(1:2, k) - obstacle.pos) - obstacle.r^2;
         % Compute value of CBF at next step
-        hkp1 = (x(1:2, k+1) - obstacle.pos)' * (x(1:2, k) - obstacle.pos) - obstacle.r^2;
+        hkp1 = (x(1:2, k+1) - obstacle.pos)' * (x(1:2, k+1) - obstacle.pos) - obstacle.r^2;
         % Append CBF constraint
         opti.subject_to(hkp1 - hk + controller.gamma * hk >= 0);
     end
+
+    % Add point wise constraints to state and control
+    opti.subject_to(controller.xb(1) <= x <= controller.xb(2));
+    opti.subject_to(controller.ub(1) <= u <= controller.ub(2));
+    % Warm start with previous solutions, 
+    % not very necessary in this case,
+    % could use extrapolation for better guesses
+    opti.set_initial(x, x_opt_prev);
+    opti.set_initial(u, u_opt_prev);
     
     % Add terminal cost
     obj = obj + x(:, end)' * controller.P * x(:, end);

@@ -25,11 +25,13 @@ y = zeros(101, length(Ns));
 for i = 1:length(Ns)
     N = Ns(i);
     disp("Running N = " + num2str(N));
+    x_opt = ones(robot.nx, N+1);
+    u_opt = ones(robot.nu, N);
     controller.gamma = 0.2;
     controller.N = N;
     for k = 1:100
         % Solve nlp
-        [x_opt, u_opt] = runMpcStep(robot, controller, obstacle);
+        [x_opt, u_opt] = runMpcStep(robot, controller, obstacle, x_opt, u_opt);
         % Update robot state
         robot = robot.update(u_opt(:, 1));
     end
