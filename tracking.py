@@ -44,6 +44,8 @@ class LocalTrackingController:
         self.current_goal_index = 0  # Index of the current goal in the path
         self.reached_threshold = 0.2
 
+        self.alpha_history = []  # To store alpha1 and alpha2 values
+
         if self.robot_spec['model'] == 'Unicycle2D':
             if 'v_max' not in self.robot_spec:
                 self.robot_spec['v_max'] = 1.0
@@ -110,6 +112,9 @@ class LocalTrackingController:
             self.pos_controller = CBFQP(self.robot, self.robot_spec)
         elif control_type == 'mpc_cbf':
             from position_control.mpc_cbf import MPCCBF
+            self.pos_controller = MPCCBF(self.robot, self.robot_spec)
+        elif control_type == 'mpc_cbf_tune_weights':
+            from position_control.mpc_cbf_tune_weights import MPCCBF
             self.pos_controller = MPCCBF(self.robot, self.robot_spec)
         elif control_type == 'optimal_decay_cbf_qp':
             from position_control.optimal_decay_cbf_qp import OptimalDecayCBFQP
@@ -336,8 +341,15 @@ class LocalTrackingController:
             if self.save_animation:
                 self.ani_idx += 1
                 if force_save or self.ani_idx % self.save_per_frame == 0:
+                    plt.title("MPC-CBF with tunable gamma")
                     plt.savefig(self.current_directory_path +
                                 "/output/animations/" + "t_step_" + str(self.ani_idx//self.save_per_frame).zfill(4) + ".png")
+                    # plotting self.alpha_history in figure 2
+                    plt.figure(2)
+                    plt.plot(self.alpha_history)
+                    plt.ylabel('alpha')
+                    plt.xlabel('step')
+                    plt.show()
 
     def control_step(self):
         '''
@@ -389,10 +401,14 @@ class LocalTrackingController:
                        'u_ref': u_ref,
                        'goal': self.goal}
         if self.control_type == 'optimal_decay_cbf_qp' or self.control_type == 'cbf_qp':
-            u = self.pos_controller.solve_control_problem(
+            # u = self.pos_controller.solve_control_problem(
+            #     self.robot.X, control_ref, self.nearest_obs)
+            u, self.alpha_history = self.pos_controller.solve_control_problem(
                 self.robot.X, control_ref, self.nearest_obs)
         else:
-            u = self.pos_controller.solve_control_problem(
+            # u = self.pos_controller.solve_control_problem(
+            #     self.robot.X, control_ref, self.nearest_multi_obs)
+            u, self.alpha_history = self.pos_controller.solve_control_problem(
                 self.robot.X, control_ref, self.nearest_multi_obs)
 
         # 5. Raise an error if the QP is infeasible, or the robot collides with the obstacle
@@ -478,6 +494,9 @@ class LocalTrackingController:
 
         print("=====   Tracking finished    =====")
         print("===================================\n")
+
+        
+
         if self.show_animation:
             plt.ioff()
             plt.close()
@@ -497,7 +516,10 @@ def single_agent_main(control_type):
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = np.append(waypoints[0], 1.0)
     
-    known_obs = np.array([[2.2, 5.0, 0.2], [3.0, 5.0, 0.2], [4.0, 9.0, 0.3], [1.5, 10.0, 0.5], [9.0, 11.0, 1.0], [7.0, 7.0, 3.0], [4.0, 3.5, 1.5],
+    # known_obs = np.array([[2.2, 5.0, 0.2], [3.0, 5.0, 0.2], [4.0, 9.0, 0.3], [1.5, 10.0, 0.5], [9.0, 11.0, 1.0], [7.0, 7.0, 3.0], [4.0, 3.5, 1.5],
+    #                         [10.0, 7.3, 0.4],
+    #                         [6.0, 13.0, 0.7], [5.0, 10.0, 0.6], [11.0, 5.0, 0.8], [13.5, 11.0, 0.6]])
+    known_obs = np.array([[1.3, 6.5, 0.75], [2.5, 5.0, 0.6], [4.0, 9.0, 0.3], [1.5, 10.0, 0.5], [9.0, 11.0, 1.0], [7.0, 7.0, 3.0], [4.0, 3.5, 1.5],
                             [10.0, 7.3, 0.4],
                             [6.0, 13.0, 0.7], [5.0, 10.0, 0.6], [11.0, 5.0, 0.8], [13.5, 11.0, 0.6]])
     
@@ -605,7 +627,8 @@ if __name__ == "__main__":
     from utils import env
     import math
 
-    single_agent_main('mpc_cbf')
+    # single_agent_main('mpc_cbf')
+    single_agent_main('mpc_cbf_tune_weights')
     #multi_agent_main('mpc_cbf', save_animation=True)
     #single_agent_main('cbf_qp')
     # single_agent_main('optimal_decay_cbf_qp')
